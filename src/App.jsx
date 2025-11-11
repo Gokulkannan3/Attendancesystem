@@ -1,5 +1,6 @@
 import Navbar from "../pages/Navbar.jsx"
 import AppRouter from "./router.jsx"
+import './App.css'
 
 function App() {
   return (
