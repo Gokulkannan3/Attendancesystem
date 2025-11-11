@@ -1,5 +1,5 @@
 import { useRef, useState, useEffect } from "react"
-import { API_BASE_URL } from "../config"
+import { API_BASE_URL } from "../src/config"
 import '../App.css'
 
 function Addworker() {

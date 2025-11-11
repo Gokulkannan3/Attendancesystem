@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react"
-import { API_BASE_URL } from "../config"
+import { API_BASE_URL } from "../src/config"
 
 function Viewattendance() {
   const [workers, setWorkers] = useState([])

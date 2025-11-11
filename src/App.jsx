@@ -1,4 +1,4 @@
-import Navbar from "./pages/Navbar.jsx"
+import Navbar from "../pages/Navbar.jsx"
 import AppRouter from "./router.jsx"
 
 function App() {

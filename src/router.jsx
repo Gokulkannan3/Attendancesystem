@@ -1,7 +1,7 @@
 import { Route, Routes, Navigate } from "react-router-dom"
-import Addworker from "./pages/addWorker"
-import Viewattendance from "./pages/ViewAttendace"
-import Markattendance from "./pages/MarkAttendance"
+import Addworker from "../pages/Addworker"
+import Viewattendance from "../pages/ViewAttendace"
+import Markattendance from "../pages/MarkAttendance"
 
 function AppRouter() {
   return (
