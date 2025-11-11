@@ -1,116 +1,154 @@
-// Markattendance.jsx
-import { useRef, useState } from "react";
+// pages/Markattendance.jsx
+import { useRef, useState, useEffect } from "react";
 import { API_BASE_URL } from "../src/config";
 import { usecamera } from "./Usecamera";
+import * as faceapi from "face-api.js";
+
+const MODEL_URL = "/models";   // Served from public/models/
 
 function Markattendance() {
   const videoRef = useRef(null);
-  const { isCameraActive, devices, currentDeviceIdx, startCamera, switchCamera } = usecamera(videoRef);
+  // FIXED: destructure 'devices'
+  const { isCameraActive, devices, startCamera, switchCamera } = usecamera(videoRef);
+
   const [capturedImage, setCapturedImage] = useState(null);
   const [identifiedWorker, setIdentifiedWorker] = useState(null);
   const [message, setMessage] = useState("");
   const [messageType, setMessageType] = useState("");
+  const [workers, setWorkers] = useState([]);
 
+  /* --------------------------------------------------------------
+     Load models + fetch workers
+  -------------------------------------------------------------- */
+  useEffect(() => {
+    const init = async () => {
+      try {
+        await Promise.all([
+          faceapi.nets.ssdMobilenetv1.loadFromUri(MODEL_URL),
+          faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL),
+          faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL),
+        ]);
+        console.log("All face-api.js models loaded");
+        setMessage("Face recognition ready.");
+      } catch (e) {
+        console.error(e);
+        setMessage("Failed to load AI models. Check public/models/.");
+        setMessageType("error");
+      }
+
+      try {
+        const res = await fetch(`${API_BASE_URL}/api/workers`);
+        const data = await res.json();
+        setWorkers(data);
+      } catch (e) {
+        setMessage("Failed to load workers.");
+        setMessageType("error");
+      }
+    };
+    init();
+  }, []);
+
+  /* --------------------------------------------------------------
+     Get face descriptor
+  -------------------------------------------------------------- */
+  const getDescriptor = async (src) => {
+    const img = await faceapi.fetchImage(src);
+    const detection = await faceapi
+      .detectSingleFace(img)
+      .withFaceLandmarks()
+      .withFaceDescriptor();
+    if (!detection) throw new Error("No face");
+    return detection.descriptor;
+  };
+
+  /* --------------------------------------------------------------
+     Capture → Identify
+  -------------------------------------------------------------- */
   const captureAndIdentifyImage = async () => {
     if (!videoRef.current?.srcObject) {
-      setMessage("Camera not active. Start it first.");
+      setMessage("Start camera first.");
       setMessageType("error");
       return;
     }
 
-    setMessage("Capturing and identifying...");
-    setMessageType("");
+    setMessage("Capturing...");
     setIdentifiedWorker(null);
 
     const canvas = document.createElement("canvas");
     canvas.width = videoRef.current.videoWidth;
     canvas.height = videoRef.current.videoHeight;
-    const ctx = canvas.getContext("2d");
-    ctx.drawImage(videoRef.current, 0, 0, canvas.width, canvas.height);
-    const imageData = canvas.toDataURL("image/png");
-    setCapturedImage(imageData);
+    canvas.getContext("2d").drawImage(videoRef.current, 0, 0);
+    const imgData = canvas.toDataURL("image/png");
+    setCapturedImage(imgData);
 
     try {
-      const uploadRes = await fetch(`${API_BASE_URL}/api/upload-image`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ image: imageData }),
-      });
-      const uploadData = await uploadRes.json();
-      if (!uploadRes.ok) throw new Error(uploadData.error || "Upload failed");
-      const imageUrl = uploadData.url;
+      const capturedDesc = await getDescriptor(imgData);
+      let best = { distance: Infinity };
 
-      const identifyRes = await fetch(`${API_BASE_URL}/api/identify-worker`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ imageUrl }),
-      });
-      const identifyData = await identifyRes.json();
+      for (const w of workers) {
+        for (const url of w.images || []) {
+          try {
+            const storedDesc = await getDescriptor(url);
+            const d = faceapi.euclideanDistance(capturedDesc, storedDesc);
+            if (d < best.distance) best = { worker: w, distance: d };
+          } catch (_) {}
+        }
+      }
 
-      if (identifyRes.ok && identifyData.success) {
-        setIdentifiedWorker(identifyData.worker);
-        setMessage(`Identified: ${identifyData.worker.name}. Tap 'Mark Attendance' to confirm.`);
+      if (best.distance < 0.6) {
+        setIdentifiedWorker(best.worker);
+        setMessage(`Match: ${best.worker.name} (${((1 - best.distance) * 100).toFixed(1)}%)`);
         setMessageType("success");
       } else {
-        setIdentifiedWorker(null);
-        setMessage(identifyData.message || "Worker not recognized. Try again.");
+        setMessage("No match. Try again.");
         setMessageType("error");
       }
-    } catch (error) {
-      console.error(error);
-      setMessage(`Error: ${error.message}`);
+    } catch (e) {
+      setMessage(`Error: ${e.message}`);
       setMessageType("error");
     }
   };
 
+  /* --------------------------------------------------------------
+     Mark attendance
+  -------------------------------------------------------------- */
   const handleMarkAttendance = async () => {
-    if (!identifiedWorker || !capturedImage) {
-      setMessage("Capture and identify a worker first.");
-      setMessageType("error");
-      return;
-    }
+    if (!identifiedWorker || !capturedImage) return;
 
-    setMessage(`Marking attendance for ${identifiedWorker.name}...`);
-    setMessageType("");
-
+    setMessage(`Uploading for ${identifiedWorker.name}...`);
     try {
-      const uploadRes = await fetch(`${API_BASE_URL}/api/upload-image`, {
+      const up = await fetch(`${API_BASE_URL}/api/upload-image`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ image: capturedImage }),
       });
-      const uploadData = await uploadRes.json();
-      if (!uploadRes.ok) throw new Error(uploadData.error || "Re-upload failed");
-      const imageUrl = uploadData.url;
+      const { url } = await up.json();
+      if (!up.ok) throw new Error("Upload failed");
 
-      const attRes = await fetch(`${API_BASE_URL}/api/attendance/${identifiedWorker.id}`, {
+      const att = await fetch(`${API_BASE_URL}/api/attendance/${identifiedWorker.id}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ imageUrl }),
+        body: JSON.stringify({ imageUrl: url }),
       });
-      const attData = await attRes.json();
+      if (!att.ok) throw new Error("Attendance failed");
 
-      if (attRes.ok) {
-        setMessage(`Attendance marked for ${identifiedWorker.name}!`);
-        setMessageType("success");
-        setCapturedImage(null);
-        setIdentifiedWorker(null);
-        if (videoRef.current?.srcObject) {
-          const stream = videoRef.current.srcObject;
-          stream.getTracks().forEach((t) => t.stop());
-          videoRef.current.srcObject = null;
-        }
-      } else {
-        throw new Error(attData.error || "Failed to mark attendance");
-      }
-    } catch (error) {
-      console.error(error);
-      setMessage(`Error: ${error.message}`);
+      setMessage(`Attendance marked!`);
+      setMessageType("success");
+      setCapturedImage(null);
+      setIdentifiedWorker(null);
+      videoRef.current?.srcObject?.getTracks().forEach((t) => t.stop());
+    } catch (e) {
+      setMessage(`Error: ${e.message}`);
       setMessageType("error");
     }
   };
 
-  const hasMultipleCameras = devices.length > 1 || /Mobi|Android|iPhone/i.test(navigator.userAgent);
+  /* --------------------------------------------------------------
+     UI
+  -------------------------------------------------------------- */
+  const hasMultipleCameras =
+    (Array.isArray(devices) && devices.length > 1) ||
+    /Mobi|Android|iPhone/i.test(navigator.userAgent);
 
   return (
     <div className="mobile:w-full mobile:max-w-none card-container">
@@ -186,7 +224,9 @@ function Markattendance() {
                   alt="Captured"
                   className="preview-image w-32 h-32 object-cover rounded-md shadow"
                 />
-                <span className="image-angle-label block text-xs text-center mt-1">Captured</span>
+                <span className="image-angle-label block text-xs text-center mt-1">
+                  Captured
+                </span>
               </div>
             </div>
           )}
