@@ -1,14 +1,14 @@
 import { Route, Routes, Navigate } from "react-router-dom"
-import AddWorker from "./pages/addWorker.jsx"
-import ViewAttendance from "./pages/ViewAttendace.jsx"
-import MarkAttendance from "./pages/MarkAttendance.jsx"
+import Addworker from "./pages/addWorker"
+import Viewattendance from "./pages/ViewAttendace"
+import Markattendance from "./pages/MarkAttendance"
 
 function AppRouter() {
   return (
     <Routes>
-      <Route path="/add-worker" element={<AddWorker />} />
-      <Route path="/view-attendance" element={<ViewAttendance />} />
-      <Route path="/mark-attendance" element={<MarkAttendance />} /> {/* New Route */}
+      <Route path="/add-worker" element={<Addworker />} />
+      <Route path="/view-attendance" element={<Viewattendance />} />
+      <Route path="/mark-attendance" element={<Markattendance />} /> {/* New Route */}
       <Route path="/" element={<Navigate to="/add-worker" replace />} />
     </Routes>
   )

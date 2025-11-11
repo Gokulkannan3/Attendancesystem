@@ -2,7 +2,7 @@ import { useRef, useState, useEffect } from "react"
 import { API_BASE_URL } from "../config"
 import '../App.css'
 
-function AddWorker() {
+function Addworker() {
   const videoRef = useRef(null)
   const [name, setName] = useState("")
   const [phone, setPhone] = useState("")
@@ -194,4 +194,4 @@ function AddWorker() {
   )
 }
 
-export default AddWorker
+export default Addworker

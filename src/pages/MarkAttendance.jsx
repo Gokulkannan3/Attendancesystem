@@ -1,7 +1,7 @@
 import { useRef, useState, useEffect } from "react"
 import { API_BASE_URL } from "../config"
 
-function MarkAttendance() {
+function Markattendance() {
   const videoRef = useRef(null)
   const [isCameraActive, setIsCameraActive] = useState(false)
   const [capturedImage, setCapturedImage] = useState(null)
@@ -211,4 +211,4 @@ function MarkAttendance() {
   )
 }
 
-export default MarkAttendance
+export default Markattendance

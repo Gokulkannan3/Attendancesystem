@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react"
 import { API_BASE_URL } from "../config"
 
-function ViewAttendance() {
+function Viewattendance() {
   const [workers, setWorkers] = useState([])
   const [message, setMessage] = useState("")
   const [messageType, setMessageType] = useState("")
@@ -184,4 +184,4 @@ function ViewAttendance() {
   )
 }
 
-export default ViewAttendance
+export default Viewattendance
