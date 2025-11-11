@@ -1,0 +1,41 @@
+@import "tailwindcss";
+
+@theme {
+  --breakpoint-hundred: 1550px;
+  --breakpoint-onefifty: 1024px;
+  --breakpoint-tab: 768px;
+  --breakpoint-mobile: 350px;
+}
+.App {
+  text-align: center;
+  padding: 20px;
+}
+video {
+  border: 1px solid #ccc;
+  margin: 10px;
+}
+input {
+  display: block;
+  margin: 10px auto;
+  padding: 5px;
+}
+button {
+  margin: 5px;
+  padding: 5px 10px;
+}
+.hamburger {
+  @apply p-2 rounded-md focus:outline-none focus:ring-2 focus:ring-inset;
+}
+
+.mobile-menu {
+  @apply absolute top-full left-0 right-0 bg-white shadow-lg flex flex-col transition-all duration-300 ease-in-out overflow-hidden;
+  max-height: 0;
+}
+
+.mobile-menu.open {
+  @apply max-h-60;
+}
+
+.mobile-nav-link {
+  @apply block px-4 py-3 text-gray-700 hover:bg-gray-100 border-b border-gray-200 last:border-b-0;
+}
