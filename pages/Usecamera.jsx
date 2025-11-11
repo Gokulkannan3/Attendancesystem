@@ -54,11 +54,13 @@ export const usecamera = (videoRef) => {
     [devices, stopStream, videoRef]
   );
 
+  // ---------- ONLY THIS PART IS CHANGED ----------
   const switchCamera = useCallback(() => {
-    if (devices.length < 2 && !/Mobi|Android|iPhone/i.test(navigator.userAgent)) return;
-    const nextIdx = (currentDeviceIdx + 1) % 2;
+    // Always toggle between front (user) and rear (environment)
+    const nextIdx = currentDeviceIdx === 0 ? 1 : 0;
     startCamera(nextIdx);
-  }, [currentDeviceIdx, devices.length, startCamera]);
+  }, [currentDeviceIdx, startCamera]);
+  // -------------------------------------------
 
   useEffect(() => {
     return () => stopStream();
